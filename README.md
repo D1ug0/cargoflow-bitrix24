@@ -1,54 +1,449 @@
-# CargoFlow
+<div align="center">
 
-CargoFlow — учебная интеграционная платформа для транспортной компании на базе Bitrix24. Проект
-объединяет воспроизводимую настройку CRM, Integration API на NestJS, Fleet Domain на
-PostgreSQL/Prisma, worker с RabbitMQ, идемпотентность и блокировки в Redis/Valkey, операционный
-dashboard на Nuxt, модуль Bitrix D7 и наблюдаемое Docker-окружение.
+# 🚚 CargoFlow
 
-## Что уже реализовано
+### Bitrix24 Integration Platform for Transport Operations
 
-- Независимая от конкретного портала спецификация направления **Грузоперевозки**: стадии,
-  поля карточки, роли, роботы, триггеры, согласование и тестовая сделка.
-- Fleet API: список и фильтрация транспорта, свободные машины, создание и просмотр рейсов,
-  контролируемые переходы между статусами.
-- Приём исходящих событий Bitrix24: валидация, безопасная проверка токена, идемпотентность через
-  Redis, `correlationId`, журнал интеграции и транзакционный outbox.
-- Клиент актуальных методов `crm.item.get`, `crm.item.update` и `crm.item.fields` для сделок
-  (`entityTypeId = 2`).
-- RabbitMQ worker с устойчивыми очередями, ручным подтверждением, экспоненциальными повторами и
-  Dead Letter Queue.
-- Dashboard на Nuxt 4, Vue 3, Pinia и Tailwind CSS: обзор, транспорт, рейсы и журнал интеграции.
-- PostgreSQL schema, миграция и seed; Prometheus, Grafana, Loki, nginx и Docker Compose.
-- Модуль для коробочного Bitrix: D7 ORM-аудит, обработчик событий, расчёт маржи/риска и PHP-тесты.
+Учебная интеграционная платформа для автоматизации грузоперевозок  
+на базе **Bitrix24 CRM, NestJS, Nuxt, PostgreSQL, RabbitMQ и Redis**.
 
-Настройки CRM нельзя безопасно применить без доступа к учебному порталу: идентификаторы, тариф и
-права различаются. Точная инструкция находится в
-[docs/03-bitrix-crm.md](docs/03-bitrix-crm.md), а полученные ID сохраняются только в `.env`.
+<br>
+
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)
+![Nuxt](https://img.shields.io/badge/Nuxt_4-00DC82?style=for-the-badge&logo=nuxt&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+
+</div>
+
+---
+
+## О проекте
+
+**CargoFlow** — учебная интеграционная система для транспортной компании.
+
+Bitrix24 используется как CRM и точка работы менеджеров, а отдельный backend отвечает за транспорт, рейсы, интеграционные события и синхронизацию данных.
+
+Проект моделирует реальный сценарий, в котором CRM связана с внешней системой управления перевозками через REST API, webhooks и очереди сообщений.
+
+Основной фокус проекта:
+
+- интеграция с Bitrix24 REST API;
+- обработка исходящих webhook-событий;
+- надёжная асинхронная обработка через RabbitMQ;
+- идемпотентность и распределённые блокировки;
+- отдельный Fleet Domain;
+- мониторинг и логирование;
+- воспроизводимое Docker-окружение.
+
+---
+
+## Возможности
+
+<table>
+<tr>
+<td width="50%">
+
+### 🔗 Bitrix24 Integration
+
+Работа с Bitrix24 CRM через:
+
+- REST API;
+- входящие webhook;
+- исходящие события;
+- `crm.item.get`;
+- `crm.item.update`;
+- `crm.item.fields`.
+
+</td>
+
+<td width="50%">
+
+### 🚛 Fleet Management
+
+Fleet API позволяет:
+
+- получать список транспорта;
+- фильтровать автомобили;
+- находить свободный транспорт;
+- создавать рейсы;
+- управлять статусами рейсов.
+
+</td>
+</tr>
+
+<tr>
+<td width="50%">
+
+### 📨 Event Processing
+
+Интеграционные события проходят через:
+
+- validation;
+- idempotency;
+- transactional outbox;
+- RabbitMQ;
+- retry;
+- Dead Letter Queue.
+
+</td>
+
+<td width="50%">
+
+### 📊 Operations Dashboard
+
+Nuxt-dashboard содержит:
+
+- обзор системы;
+- транспорт;
+- рейсы;
+- integration log;
+- состояние интеграции.
+
+</td>
+</tr>
+
+<tr>
+<td width="50%">
+
+### 🔒 Reliability
+
+Для защиты интеграционного контура используются:
+
+- correlation ID;
+- Redis / Valkey;
+- idempotency keys;
+- controlled retries;
+- transactional outbox.
+
+</td>
+
+<td width="50%">
+
+### 📈 Observability
+
+В инфраструктуру входят:
+
+- Prometheus;
+- Grafana;
+- Loki;
+- структурированные логи;
+- метрики сервисов.
+
+</td>
+</tr>
+</table>
+
+---
 
 ## Архитектура
 
 ```text
-Bitrix24 CRM --исходящий webhook--> Integration API --outbox--> RabbitMQ
-      ^                                  |                         |
-      |                                  v                         v
-      +----------- crm.item.* ------- PostgreSQL <------------ Worker
-                                         ^                         |
-                                         |                         v
-Nuxt Dashboard <---- nginx /api ---------+                   Redis/Valkey
+                         ┌─────────────────────┐
+                         │      Bitrix24       │
+                         │        CRM          │
+                         └──────────┬──────────┘
+                                    │
+                          outgoing webhook
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │   Integration API   │
+                         │       NestJS        │
+                         └──────┬───────┬──────┘
+                                │       │
+                         outbox │       │ REST
+                                ▼       ▼
+                        ┌──────────┐  PostgreSQL
+                        │ RabbitMQ │
+                        └────┬─────┘
+                             │
+                             ▼
+                        ┌──────────┐
+                        │  Worker  │
+                        └────┬─────┘
+                             │
+                       Redis / Valkey
+                             │
+                             ▼
+                         Bitrix24 API
+
+                               ▲
+                               │
+                         Fleet / API
+                               │
+                        ┌──────┴──────┐
+                        │ Nuxt Admin  │
+                        │  Dashboard  │
+                        └─────────────┘
 ```
 
-Границы систем и сценарии отказов описаны в
-[docs/02-architecture.md](docs/02-architecture.md).
+Основная идея — отделить CRM от доменной логики транспортной системы.
 
-## Технологии
+Bitrix24 отвечает за работу менеджеров и сделки, а CargoFlow — за транспорт, рейсы, интеграцию и обработку событий.
 
-Node.js 22, pnpm, Turborepo, NestJS, TypeScript, Nuxt 4, Vue 3, Pinia, Tailwind CSS,
-PostgreSQL, Prisma, RabbitMQ, Valkey, PHP 8.2, Bitrix D7, Prometheus, Grafana, Loki, nginx,
-Vitest, PHPUnit, PHPStan, Docker Compose и GitHub Actions.
+---
+
+## Поток события
+
+Пример сценария:
+
+```text
+Сделка изменена в Bitrix24
+            ↓
+Outgoing Webhook
+            ↓
+Integration API
+            ↓
+Validation
+            ↓
+Idempotency check
+            ↓
+PostgreSQL transaction
+            ↓
+Transactional Outbox
+            ↓
+RabbitMQ
+            ↓
+Worker
+            ↓
+Fleet Domain / Bitrix24
+```
+
+Такой подход позволяет не терять события при временной недоступности внешних сервисов.
+
+---
+
+## Integration API
+
+API принимает события от Bitrix24 и выполняет:
+
+```text
+request validation
+token validation
+idempotency
+correlation ID
+integration logging
+transactional outbox
+```
+
+Поддерживаются актуальные Bitrix24 REST-методы для сделок:
+
+```text
+crm.item.get
+crm.item.update
+crm.item.fields
+```
+
+Для сделок используется:
+
+```text
+entityTypeId = 2
+```
+
+---
+
+## RabbitMQ Worker
+
+Асинхронный worker обрабатывает события из RabbitMQ.
+
+Используются:
+
+```text
+durable queues
+manual acknowledgements
+exponential retry
+dead letter queue
+correlation ID
+```
+
+Если Bitrix24 временно недоступен, событие может быть повторно обработано без потери исходных данных.
+
+---
+
+## Idempotency
+
+Повторная доставка одного события не должна приводить к повторной бизнес-операции.
+
+Для этого используется Redis / Valkey.
+
+```text
+Bitrix Event
+      ↓
+Idempotency Key
+      ↓
+Redis / Valkey
+      ↓
+new? ───── yes ───→ process
+ │
+ no
+ ↓
+ignore
+```
+
+---
+
+## Fleet Domain
+
+Отдельный Fleet API отвечает за транспорт и рейсы.
+
+Основные сценарии:
+
+```text
+GET available vehicles
+
+GET vehicles
+
+POST trip
+
+GET trip
+
+change trip status
+```
+
+Статусы рейсов изменяются только через разрешённые переходы.
+
+---
+
+## Dashboard
+
+Frontend построен на:
+
+```text
+Nuxt 4
+Vue 3
+TypeScript
+Pinia
+Tailwind CSS
+```
+
+Dashboard предоставляет интерфейс для:
+
+```text
+Overview
+Vehicles
+Trips
+Integration Log
+```
+
+---
+
+## Bitrix24 CRM
+
+CRM-направление **«Грузоперевозки»** описано независимо от конкретного портала.
+
+Документация включает:
+
+```text
+Stages
+Custom Fields
+Roles
+Robots
+Triggers
+Approval Flow
+Test Deal
+```
+
+ID стадий и полей не хардкодятся и передаются через environment variables.
+
+Это позволяет адаптировать проект под разные Bitrix24-порталы.
+
+---
+
+## Bitrix D7 Module
+
+Для коробочной версии Bitrix24 предусмотрен отдельный PHP-модуль.
+
+Он содержит:
+
+```text
+D7 ORM
+event handlers
+audit log
+margin calculation
+risk calculation
+PHP tests
+```
+
+Модуль расположен в:
+
+```text
+bitrix/local/modules/cargoflow.core
+```
+
+---
+
+## Observability
+
+В Docker-окружение включены:
+
+```text
+Prometheus
+Grafana
+Loki
+nginx
+```
+
+Основная цель — возможность наблюдать состояние интеграционного контура и расследовать ошибки.
+
+---
+
+## Стек
+
+| Layer | Technologies |
+|---|---|
+| CRM | Bitrix24 |
+| Backend | NestJS, TypeScript |
+| Frontend | Nuxt 4, Vue 3, Pinia, Tailwind CSS |
+| Database | PostgreSQL |
+| ORM | Prisma |
+| Messaging | RabbitMQ |
+| Cache / Locks | Redis / Valkey |
+| Bitrix Backend | PHP 8.2, Bitrix D7 |
+| Observability | Prometheus, Grafana, Loki |
+| Proxy | nginx |
+| Tests | Vitest, PHPUnit |
+| Static Analysis | PHPStan |
+| Infrastructure | Docker Compose |
+| Monorepo | pnpm, Turborepo |
+| CI | GitHub Actions |
+
+---
+
+## Monorepo
+
+Проект организован как monorepo.
+
+```text
+bitrix-project/
+│
+├── apps/
+│   ├── api/
+│   ├── worker/
+│   └── dashboard/
+│
+├── packages/
+│
+├── bitrix/
+│   └── local/modules/cargoflow.core/
+│
+├── infrastructure/
+├── docs/
+│
+├── docker-compose.yml
+├── package.json
+└── README.md
+```
+
+Backend, frontend и worker развиваются как отдельные приложения, но используют общую инфраструктуру и shared packages.
+
+---
 
 ## Быстрый запуск
 
-Понадобится Docker с Compose. Для разработки без контейнеров нужны Node.js 22 и pnpm 10.
+Для полного локального окружения нужен Docker.
 
 ```bash
 cp .env.example .env
@@ -57,59 +452,82 @@ docker compose up --build
 
 После запуска доступны:
 
-- dashboard: `http://localhost:8080`;
-- Swagger: `http://localhost:8080/api/docs`;
-- RabbitMQ: `http://localhost:15672` (`cargoflow` / `cargoflow` только для локальной разработки);
-- Prometheus: `http://localhost:9090`;
-- Grafana: `http://localhost:3002` (`admin` / `admin` по умолчанию).
+```text
+Dashboard
+http://localhost:8080
 
-Fleet API и dashboard работают без реквизитов Bitrix24. Синхронизация с порталом начнётся только
-после заполнения `BITRIX_WEBHOOK_URL`, `BITRIX_APPLICATION_TOKEN`, кодов полей и стадий. Пока URL
-портала не задан, worker безопасно подтверждает локальные события, не отправляя их в DLQ.
+Swagger
+http://localhost:8080/api/docs
 
-### Запуск без Docker для приложений
+RabbitMQ
+http://localhost:15672
 
-Сначала запустите PostgreSQL, RabbitMQ и Valkey, укажите доступные с хоста адреса в `.env`, затем:
+Prometheus
+http://localhost:9090
+
+Grafana
+http://localhost:3002
+```
+
+Fleet API и dashboard могут работать без подключения Bitrix24.
+
+---
+
+## Локальная разработка
+
+Для запуска приложений без Docker:
 
 ```bash
 pnpm install
+
 pnpm db:generate
 pnpm db:migrate
 pnpm db:seed
+
 pnpm dev
 ```
 
-## Примеры API
+Требуются:
 
-```bash
-curl http://localhost:8080/api/vehicles/available
-
-curl -X POST http://localhost:8080/api/trips \
-  -H 'content-type: application/json' \
-  -d '{
-    "bitrixDealId": 1001,
-    "from": "Москва",
-    "to": "Казань",
-    "loadingDate": "2026-09-20T05:00:00.000Z",
-    "deliveryDate": "2026-09-21T11:00:00.000Z"
-  }'
+```text
+Node.js 22+
+pnpm 10+
+PostgreSQL
+RabbitMQ
+Redis / Valkey
 ```
 
-Полный контракт и модели ошибок находятся в Swagger. Пример события Bitrix24 и проверка токена
-описаны в [docs/09-webhooks.md](docs/09-webhooks.md).
+---
 
-## Переменные окружения
+## Environment
 
-Скопируйте `.env.example`, но не записывайте в него настоящие секреты:
+Основные переменные:
 
-- `DATABASE_URL`, `RABBITMQ_URL`, `REDIS_URL` — инфраструктура;
-- `BITRIX_WEBHOOK_URL` — приватный адрес входящего webhook для REST-вызовов;
-- `BITRIX_APPLICATION_TOKEN` — ожидаемый токен исходящих событий;
-- `BITRIX_FIELD_*`, `BITRIX_STAGE_*` — ID, полученные после настройки портала;
-- `NUXT_PUBLIC_API_BASE` — адрес API, доступный браузеру;
-- `SENTRY_DSN`, `OTEL_EXPORTER_OTLP_ENDPOINT` — зарезервированные необязательные экспортёры.
+```dotenv
+DATABASE_URL=
+RABBITMQ_URL=
+REDIS_URL=
 
-## Проверки качества
+BITRIX_WEBHOOK_URL=
+BITRIX_APPLICATION_TOKEN=
+
+BITRIX_FIELD_*
+BITRIX_STAGE_*
+
+NUXT_PUBLIC_API_BASE=
+```
+
+Секреты не должны попадать в Git.
+
+Пример находится в:
+
+```text
+.env.example
+```
+
+---
+
+## Проверки
 
 ```bash
 pnpm format:check
@@ -117,35 +535,91 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+
 docker compose config
 ```
 
-Проверки PHP-модуля:
+PHP-модуль:
 
 ```bash
 cd bitrix/local/modules/cargoflow.core
+
 composer install
 composer test
 composer phpstan
 ```
 
+---
+
 ## Документация
 
-Нумерованные файлы в `docs/` описывают CRM, права, автоматизацию, REST/webhook, очереди, Redis,
-правила Fleet Domain, ошибки, мониторинг, тестирование и запуск. Архитектурные решения хранятся в
-`docs/adr/`.
+В `docs/` находятся отдельные документы по:
 
-## Скриншоты
+```text
+Architecture
+Bitrix24 CRM setup
+Roles & Permissions
+Automation
+REST API
+Webhooks
+RabbitMQ
+Redis
+Fleet Domain
+Error Handling
+Monitoring
+Testing
+Local Development
+```
 
-Список доказательных скриншотов находится в
-[screenshots/README.md](screenshots/README.md). На снимках нельзя оставлять токены, персональные
-данные, документы клиентов и внутренние адреса.
+Архитектурные решения дополнительно оформляются как ADR.
 
-## Следующие этапы
+---
 
-- Применить и проверить Phase 1 в учебном портале Bitrix24.
-- Подключить реальные исходящие события и проверить критический путь Bitrix24 ↔ Fleet.
-- Добавить хранение OAuth-токенов для распространяемого приложения Bitrix24.
-- Подключить OpenTelemetry и Sentry после выбора реальных endpoint/проекта.
-- Добавить интеграционные тесты с временными PostgreSQL, RabbitMQ и Valkey.
-- Проверить D7-модуль внутри лицензированной тестовой коробочной установки.
+## Что хотелось изучить в проекте
+
+CargoFlow создавался как практический проект для изучения разработки и эксплуатации интеграций Bitrix24.
+
+Основные технические направления:
+
+```text
+Bitrix24 REST API
+Bitrix24 Webhooks
+Bitrix D7
+NestJS
+Nuxt
+PostgreSQL
+RabbitMQ
+Redis
+Transactional Outbox
+Idempotency
+Distributed Systems
+Observability
+Docker
+CI/CD
+```
+
+---
+
+## Дальнейшее развитие
+
+Планируется:
+
+- подключение учебного Bitrix24-портала;
+- проверка реального потока Bitrix24 → Fleet → Bitrix24;
+- OAuth для устанавливаемого приложения;
+- OpenTelemetry;
+- Sentry;
+- интеграционные тесты инфраструктуры;
+- тестирование D7-модуля в коробочной версии Bitrix24.
+
+---
+
+<div align="center">
+
+### 🚚 CargoFlow
+
+**Bitrix24 · NestJS · Nuxt · PostgreSQL · RabbitMQ · Redis**
+
+CRM integration, transport operations and reliable event processing.
+
+</div>
