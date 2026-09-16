@@ -32,10 +32,7 @@ export class TripSyncService {
     await this.locks.withLock(`deal:${dealId}`, async () => {
       if (message.type === 'trip.status.changed') {
         await this.pushStatusToBitrix(dealId, payload.status);
-      } else if (
-        (message.type === 'trip.create' || message.type === 'bitrix.deal.update') &&
-        payload.tripId
-      ) {
+      } else if (payload.tripId) {
         await this.pushTripToBitrix(dealId, payload.tripId);
       } else if (message.type === 'trip.create' || message.type === 'trip.update') {
         await this.pullDealFromBitrix(dealId);

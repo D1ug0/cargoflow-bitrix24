@@ -2,6 +2,10 @@
 
 Локальный контур запускается `docker compose up --build`; nginx публикует приложение на порту 8080. Перед API-стартом контейнер применяет сохранённые Prisma migrations и идемпотентный seed.
 
+Для разработки приложений на хосте запустите только инфраструктуру командой
+`docker compose up -d postgres rabbitmq redis`: их порты настраиваются через `POSTGRES_PORT`,
+`RABBITMQ_PORT` и `REDIS_PORT`. Публичная production-среда не должна открывать эти порты наружу.
+
 Checklist для production:
 
 1. Заменить стандартные пароли, использовать secret store и перевыпустить webhook Bitrix24.

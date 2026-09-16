@@ -27,6 +27,9 @@ export interface Trip {
   driver?: Driver | null;
 }
 
+export type TripStatus =
+  'CREATED' | 'ASSIGNED' | 'LOADING' | 'IN_TRANSIT' | 'DELIVERED' | 'CLOSED' | 'CANCELLED';
+
 export interface IntegrationLog {
   id: string;
   correlationId: string;

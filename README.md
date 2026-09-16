@@ -69,6 +69,7 @@ Fleet API позволяет:
 - фильтровать автомобили;
 - находить свободный транспорт;
 - создавать рейсы;
+- назначать свободную машину и её водителя;
 - управлять статусами рейсов.
 
 </td>
@@ -328,6 +329,10 @@ Trips
 Integration Log
 ```
 
+На странице `Trips` можно создать демонстрационный рейс, назначить свободный автомобиль,
+последовательно провести перевозку до закрытия или отменить её. Подключение Bitrix24 для этого не
+требуется.
+
 ---
 
 ## Bitrix24 CRM
@@ -392,23 +397,23 @@ nginx
 
 ## Стек
 
-| Layer | Technologies |
-|---|---|
-| CRM | Bitrix24 |
-| Backend | NestJS, TypeScript |
-| Frontend | Nuxt 4, Vue 3, Pinia, Tailwind CSS |
-| Database | PostgreSQL |
-| ORM | Prisma |
-| Messaging | RabbitMQ |
-| Cache / Locks | Redis / Valkey |
-| Bitrix Backend | PHP 8.2, Bitrix D7 |
-| Observability | Prometheus, Grafana, Loki |
-| Proxy | nginx |
-| Tests | Vitest, PHPUnit |
-| Static Analysis | PHPStan |
-| Infrastructure | Docker Compose |
-| Monorepo | pnpm, Turborepo |
-| CI | GitHub Actions |
+| Layer           | Technologies                       |
+| --------------- | ---------------------------------- |
+| CRM             | Bitrix24                           |
+| Backend         | NestJS, TypeScript                 |
+| Frontend        | Nuxt 4, Vue 3, Pinia, Tailwind CSS |
+| Database        | PostgreSQL                         |
+| ORM             | Prisma                             |
+| Messaging       | RabbitMQ                           |
+| Cache / Locks   | Redis / Valkey                     |
+| Bitrix Backend  | PHP 8.2, Bitrix D7                 |
+| Observability   | Prometheus, Grafana, Loki          |
+| Proxy           | nginx                              |
+| Tests           | Vitest, PHPUnit                    |
+| Static Analysis | PHPStan                            |
+| Infrastructure  | Docker Compose                     |
+| Monorepo        | pnpm, Turborepo                    |
+| CI              | GitHub Actions                     |
 
 ---
 
@@ -480,6 +485,8 @@ Fleet API и dashboard могут работать без подключения
 ```bash
 pnpm install
 
+docker compose up -d postgres rabbitmq redis
+
 pnpm db:generate
 pnpm db:migrate
 pnpm db:seed
@@ -496,6 +503,13 @@ PostgreSQL
 RabbitMQ
 Redis / Valkey
 ```
+
+`docker-compose.yml` публикует для локальной разработки порты PostgreSQL `5432`, RabbitMQ `5672`
+и Valkey `6379`. Значения `.env.example` используют `localhost`; внутри полного Compose-окружения
+backend автоматически получает сервисные адреса `postgres`, `rabbitmq` и `redis`.
+
+После запуска откройте `http://localhost:3000`. API доступен на `http://localhost:3001`, Swagger —
+на `http://localhost:3001/docs`.
 
 ---
 

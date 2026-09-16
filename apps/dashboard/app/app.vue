@@ -1,5 +1,24 @@
 <script setup lang="ts">
 const route = useRoute();
+const api = useCargoApi();
+const {
+  data: systemHealth,
+  error: systemHealthError,
+  refresh: refreshHealth,
+} = await useAsyncData('system-health', () => api.get<{ status: string }>('/health'));
+const systemOnline = computed(
+  () => systemHealth.value?.status === 'ok' && !systemHealthError.value,
+);
+let healthTimer: ReturnType<typeof setInterval> | undefined;
+
+onMounted(() => {
+  healthTimer = setInterval(() => void refreshHealth(), 30_000);
+});
+
+onBeforeUnmount(() => {
+  if (healthTimer) clearInterval(healthTimer);
+});
+
 const links = [
   { to: '/', label: 'Обзор', icon: '◫' },
   { to: '/vehicles', label: 'Транспорт', icon: '▰' },
@@ -41,7 +60,11 @@ const links = [
         class="mt-auto rounded-2xl border border-white/10 bg-white/5 p-4 text-xs leading-5 text-slate-400"
       >
         <span class="mb-2 flex items-center gap-2 text-white">
-          <i class="h-2 w-2 rounded-full bg-emerald-400" /> Система подключена
+          <i
+            class="h-2 w-2 rounded-full"
+            :class="systemOnline ? 'bg-emerald-400' : 'bg-rose-400'"
+          />
+          {{ systemOnline ? 'Система подключена' : 'Система недоступна' }}
         </span>
         Bitrix24 · Fleet · Queue
       </div>

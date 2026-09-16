@@ -44,11 +44,37 @@ export class TripsService {
     try {
       const trip = await this.prisma.$transaction(async (tx) => {
         let resolvedDriverId = input.driverId;
+        if (input.driverId && !input.vehicleId) {
+          throw new UnprocessableEntityException('Водитель назначается вместе с автомобилем');
+        }
         if (input.vehicleId) {
           const vehicle = await tx.vehicle.findUnique({ where: { id: input.vehicleId } });
           if (!vehicle) throw new NotFoundException('Автомобиль не найден');
           if (vehicle.status !== 'AVAILABLE') throw new ConflictException('Автомобиль недоступен');
+          if (input.driverId && vehicle.driverId && input.driverId !== vehicle.driverId) {
+            throw new ConflictException('Выбранный водитель не закреплён за автомобилем');
+          }
           resolvedDriverId ??= vehicle.driverId ?? undefined;
+          if (!resolvedDriverId) {
+            throw new UnprocessableEntityException('У автомобиля не назначен водитель');
+          }
+
+          const vehicleClaim = await tx.vehicle.updateMany({
+            where: { id: input.vehicleId, status: 'AVAILABLE' },
+            data: {
+              status: 'IN_TRIP',
+              ...(resolvedDriverId ? { driverId: resolvedDriverId } : {}),
+            },
+          });
+          if (vehicleClaim.count !== 1) throw new ConflictException('Автомобиль уже занят');
+
+          if (resolvedDriverId) {
+            const driverClaim = await tx.driver.updateMany({
+              where: { id: resolvedDriverId, status: 'AVAILABLE' },
+              data: { status: 'IN_TRIP' },
+            });
+            if (driverClaim.count !== 1) throw new ConflictException('Водитель недоступен');
+          }
         }
 
         const created = await tx.trip.create({
@@ -64,13 +90,6 @@ export class TripsService {
           },
           include: { vehicle: true, driver: true },
         });
-
-        if (input.vehicleId) {
-          await tx.vehicle.update({ where: { id: input.vehicleId }, data: { status: 'IN_TRIP' } });
-        }
-        if (resolvedDriverId) {
-          await tx.driver.update({ where: { id: resolvedDriverId }, data: { status: 'IN_TRIP' } });
-        }
 
         const event = await tx.integrationEvent.create({
           data: {
@@ -93,13 +112,74 @@ export class TripsService {
     }
   }
 
-  async updateStatus(id: string, status: TripStatus, correlationId: string) {
+  async assignVehicle(id: string, vehicleId: string, correlationId: string) {
     let outboxId = '';
     const trip = await this.prisma.$transaction(async (tx) => {
       const current = await tx.trip.findUnique({ where: { id } });
       if (!current) throw new NotFoundException('Рейс не найден');
+      if (current.status !== 'CREATED') {
+        throw new ConflictException('Назначить автомобиль можно только созданному рейсу');
+      }
+
+      const vehicle = await tx.vehicle.findUnique({ where: { id: vehicleId } });
+      if (!vehicle) throw new NotFoundException('Автомобиль не найден');
+      if (vehicle.status !== 'AVAILABLE') throw new ConflictException('Автомобиль недоступен');
+      if (!vehicle.driverId) {
+        throw new UnprocessableEntityException('У автомобиля не назначен водитель');
+      }
+
+      const vehicleClaim = await tx.vehicle.updateMany({
+        where: { id: vehicleId, status: 'AVAILABLE' },
+        data: { status: 'IN_TRIP' },
+      });
+      if (vehicleClaim.count !== 1) throw new ConflictException('Автомобиль уже занят');
+
+      const driverClaim = await tx.driver.updateMany({
+        where: { id: vehicle.driverId, status: 'AVAILABLE' },
+        data: { status: 'IN_TRIP' },
+      });
+      if (driverClaim.count !== 1) throw new ConflictException('Водитель недоступен');
+
+      const updated = await tx.trip.update({
+        where: { id },
+        data: { vehicleId, driverId: vehicle.driverId, status: 'ASSIGNED' },
+        include: { vehicle: true, driver: true },
+      });
+      const event = await tx.integrationEvent.create({
+        data: {
+          correlationId,
+          source: 'FLEET',
+          eventType: 'trip.update',
+          payload: {
+            tripId: updated.id,
+            bitrixDealId: updated.bitrixDealId,
+            previousStatus: current.status,
+            status: updated.status,
+          },
+        },
+      });
+      outboxId = event.id;
+      return updated;
+    });
+
+    await this.outbox.dispatchById(outboxId);
+    return trip;
+  }
+
+  async updateStatus(id: string, status: TripStatus, correlationId: string) {
+    let outboxId = '';
+    const trip = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.trip.findUnique({
+        where: { id },
+        include: { vehicle: true, driver: true },
+      });
+      if (!current) throw new NotFoundException('Рейс не найден');
+      if (current.status === status) return current;
       if (!canTransition(current.status, status)) {
         throw new ConflictException(`Переход ${current.status} → ${status} запрещён`);
+      }
+      if (status === 'ASSIGNED' && !current.vehicleId) {
+        throw new ConflictException('Сначала назначьте автомобиль');
       }
 
       const updated = await tx.trip.update({
@@ -139,7 +219,7 @@ export class TripsService {
       return updated;
     });
 
-    await this.outbox.dispatchById(outboxId);
+    if (outboxId) await this.outbox.dispatchById(outboxId);
     return trip;
   }
 }
