@@ -1,0 +1,30 @@
+{
+  "name": "Грузоперевозки",
+  "entityTypeId": 2,
+  "stages": [
+    { "sort": 10, "name": "Новая заявка", "semantic": "process" },
+    { "sort": 20, "name": "Расчёт стоимости", "semantic": "process" },
+    { "sort": 30, "name": "Предложение отправлено", "semantic": "process" },
+    { "sort": 40, "name": "Согласование", "semantic": "process" },
+    { "sort": 50, "name": "Поиск транспорта", "semantic": "process" },
+    {
+      "sort": 60,
+      "name": "Транспорт назначен",
+      "semantic": "process",
+      "env": "BITRIX_STAGE_ASSIGNED"
+    },
+    { "sort": 70, "name": "На погрузке", "semantic": "process", "env": "BITRIX_STAGE_LOADING" },
+    { "sort": 80, "name": "В пути", "semantic": "process", "env": "BITRIX_STAGE_IN_TRANSIT" },
+    { "sort": 90, "name": "Доставлено", "semantic": "process", "env": "BITRIX_STAGE_DELIVERED" },
+    { "sort": 100, "name": "Документы", "semantic": "process" },
+    { "sort": 110, "name": "Успешно закрыто", "semantic": "success", "env": "BITRIX_STAGE_CLOSED" },
+    {
+      "sort": 120,
+      "name": "Отказ клиента",
+      "semantic": "failure",
+      "env": "BITRIX_STAGE_CANCELLED"
+    },
+    { "sort": 130, "name": "Невозможно выполнить", "semantic": "failure" },
+    { "sort": 140, "name": "Проиграно", "semantic": "failure" }
+  ]
+}

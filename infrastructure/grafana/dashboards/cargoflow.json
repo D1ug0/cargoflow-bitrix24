@@ -1,0 +1,46 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "API traffic",
+      "targets": [
+        { "expr": "sum(rate(http_requests_total[5m])) by (route)", "legendFormat": "{{route}}" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP errors",
+      "targets": [
+        { "expr": "sum(rate(http_errors_total[5m])) by (status)", "legendFormat": "{{status}}" }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Webhook p95 latency",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(webhook_processing_time_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "type": "logs",
+      "title": "Application logs",
+      "targets": [{ "expr": "{service=~\"integration-api|integration-worker\"}" }],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    }
+  ],
+  "schemaVersion": 41,
+  "tags": ["cargoflow"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "title": "CargoFlow Operations",
+  "uid": "cargoflow-operations",
+  "version": 1
+}

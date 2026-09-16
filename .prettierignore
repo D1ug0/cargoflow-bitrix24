@@ -1,0 +1,9 @@
+node_modules
+dist
+.nuxt
+.output
+coverage
+pnpm-lock.yaml
+packages/database/prisma/migrations
+bitrix/local/modules/cargoflow.core/vendor
+CargoFlow.md

@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VehicleType {
+  TENT
+  REFRIGERATOR
+  ISOTHERM
+  VAN
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  IN_TRIP
+  SERVICE
+  UNAVAILABLE
+}
+
+enum DriverStatus {
+  AVAILABLE
+  IN_TRIP
+  UNAVAILABLE
+}
+
+enum TripStatus {
+  CREATED
+  ASSIGNED
+  LOADING
+  IN_TRANSIT
+  DELIVERED
+  CLOSED
+  CANCELLED
+}
+
+enum IntegrationEventStatus {
+  PENDING
+  PUBLISHED
+  PROCESSED
+  FAILED
+  DEAD_LETTERED
+}
+
+enum IntegrationLogStatus {
+  RECEIVED
+  SUCCESS
+  ERROR
+  IGNORED
+}
+
+model Vehicle {
+  id          String        @id @default(uuid()) @db.Uuid
+  plateNumber String        @unique @map("plate_number")
+  type        VehicleType
+  capacity    Decimal       @db.Decimal(8, 2)
+  status      VehicleStatus @default(AVAILABLE)
+  city        String
+  driverId    String?       @unique @map("driver_id") @db.Uuid
+  driver      Driver?       @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  trips       Trip[]
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@index([status, city])
+  @@map("vehicles")
+}
+
+model Driver {
+  id                String       @id @default(uuid()) @db.Uuid
+  name              String
+  phone             String       @unique
+  licenseCategories String[]     @map("license_categories")
+  status            DriverStatus @default(AVAILABLE)
+  vehicle           Vehicle?
+  trips             Trip[]
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("drivers")
+}
+
+model Trip {
+  id             String     @id @default(uuid()) @db.Uuid
+  bitrixDealId   Int        @unique @map("bitrix_deal_id")
+  vehicleId      String?    @map("vehicle_id") @db.Uuid
+  driverId       String?    @map("driver_id") @db.Uuid
+  from           String     @map("from_location")
+  to             String     @map("to_location")
+  loadingDate    DateTime   @map("loading_date") @db.Timestamptz(3)
+  deliveryDate   DateTime   @map("delivery_date") @db.Timestamptz(3)
+  status         TripStatus @default(CREATED)
+  vehicle        Vehicle?   @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  driver         Driver?    @relation(fields: [driverId], references: [id], onDelete: SetNull)
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([loadingDate])
+  @@map("trips")
+}
+
+model IntegrationEvent {
+  id              String                 @id @default(uuid()) @db.Uuid
+  externalEventId String?                @unique @map("external_event_id")
+  correlationId   String                 @map("correlation_id") @db.Uuid
+  source          String
+  eventType       String                 @map("event_type")
+  payload         Json
+  status          IntegrationEventStatus @default(PENDING)
+  attempts        Int                    @default(0)
+  lastError       String?                @map("last_error")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  @@index([status, createdAt])
+  @@index([correlationId])
+  @@map("integration_events")
+}
+
+model IntegrationLog {
+  id            String               @id @default(uuid()) @db.Uuid
+  correlationId String               @map("correlation_id") @db.Uuid
+  source        String
+  eventType     String               @map("event_type")
+  request       Json?
+  response      Json?
+  status        IntegrationLogStatus
+  attempts      Int                  @default(1)
+  error         String?
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([correlationId])
+  @@index([status])
+  @@map("integration_logs")
+}
+

@@ -1,0 +1,26 @@
+{
+  "name": "cargoflow/bitrix-core",
+  "description": "CargoFlow services and audit module for Bitrix24 On-Premise",
+  "type": "bitrix-d7-module",
+  "require": {
+    "php": ">=8.2"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^11.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "CargoFlow\\Core\\": "lib/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "CargoFlow\\Core\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "phpstan": "phpstan analyse"
+  }
+}
