@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IntegrationLogStatus } from '@cargoflow/database';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from 'class-validator';
 
 export class LogQueryDto {
   @ApiPropertyOptional({ default: 50, maximum: 200 })
@@ -18,8 +19,16 @@ export class LogQueryDto {
   @Min(0)
   offset = 0;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ enum: IntegrationLogStatus })
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(IntegrationLogStatus)
+  status?: IntegrationLogStatus;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Exact correlation ID used across API, queue, worker, and logs',
+  })
+  @IsOptional()
+  @IsUUID()
+  correlationId?: string;
 }

@@ -3,7 +3,17 @@ import type { IntegrationLog } from '~/types/api';
 
 const api = useCargoApi();
 const ui = useUiStore();
-const query = computed(() => ({ status: ui.integrationStatus || undefined, limit: 100 }));
+const correlationInput = ref(ui.integrationCorrelationId);
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const correlationIsInvalid = computed(() => {
+  const value = correlationInput.value.trim();
+  return value.length > 0 && !uuidPattern.test(value);
+});
+const query = computed(() => ({
+  status: ui.integrationStatus || undefined,
+  correlationId: ui.integrationCorrelationId || undefined,
+  limit: 100,
+}));
 const { data, error, status, refresh } = await useAsyncData(
   'integrations',
   () => api.get<{ items: IntegrationLog[]; total: number }>('/integrations', query.value),
@@ -13,6 +23,16 @@ const formatDate = (value: string) =>
   new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'medium' }).format(
     new Date(value),
   );
+
+function applyCorrelationFilter() {
+  if (correlationIsInvalid.value) return;
+  ui.integrationCorrelationId = correlationInput.value.trim();
+}
+
+function clearCorrelationFilter() {
+  correlationInput.value = '';
+  ui.integrationCorrelationId = '';
+}
 </script>
 
 <template>
@@ -24,7 +44,10 @@ const formatDate = (value: string) =>
       <h1 class="text-3xl font-bold tracking-tight">Интеграции</h1>
       <p class="mt-2 text-sm text-slate-500">Единый журнал прохождения событий между системами.</p>
     </div>
-    <div class="panel mb-5 flex flex-wrap items-center gap-3 p-4">
+    <form
+      class="panel mb-5 flex flex-wrap items-start gap-3 p-4"
+      @submit.prevent="applyCorrelationFilter"
+    >
       <select
         v-model="ui.integrationStatus"
         class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none"
@@ -35,14 +58,50 @@ const formatDate = (value: string) =>
         <option value="RECEIVED">Получено</option>
         <option value="IGNORED">Пропущено</option>
       </select>
-      <span class="text-sm text-slate-400">Записей: {{ data?.total ?? 0 }}</span>
+      <label class="min-w-64 flex-1">
+        <span class="sr-only">Correlation ID</span>
+        <input
+          v-model="correlationInput"
+          type="search"
+          autocomplete="off"
+          class="w-full rounded-xl border bg-white px-4 py-2.5 font-mono text-xs outline-none"
+          :class="correlationIsInvalid ? 'border-rose-400' : 'border-slate-200'"
+          placeholder="Correlation ID"
+          aria-describedby="correlation-id-hint"
+          :aria-invalid="correlationIsInvalid"
+        />
+        <span
+          id="correlation-id-hint"
+          class="mt-1 block text-xs"
+          :class="correlationIsInvalid ? 'text-rose-600' : 'text-slate-400'"
+        >
+          {{ correlationIsInvalid ? 'Введите UUID целиком' : 'Точный UUID из ответа или лога' }}
+        </span>
+      </label>
       <button
+        type="submit"
+        class="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+        :disabled="correlationIsInvalid"
+      >
+        Найти
+      </button>
+      <button
+        v-if="ui.integrationCorrelationId"
+        type="button"
+        class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600"
+        @click="clearCorrelationFilter"
+      >
+        Сбросить
+      </button>
+      <span class="self-center text-sm text-slate-400">Записей: {{ data?.total ?? 0 }}</span>
+      <button
+        type="button"
         class="ml-auto rounded-xl bg-[#15231f] px-4 py-2.5 text-sm font-semibold text-white"
         @click="refresh()"
       >
         Обновить
       </button>
-    </div>
+    </form>
     <div class="panel table-shell">
       <p v-if="error" class="p-5 text-sm text-rose-700">Не удалось загрузить журнал.</p>
       <table v-else class="data-table" :class="status === 'pending' ? 'opacity-50' : ''">
