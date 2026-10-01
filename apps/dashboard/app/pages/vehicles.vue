@@ -6,6 +6,8 @@ const ui = useUiStore();
 const query = computed(() => ({
   search: ui.vehicleSearch || undefined,
   status: ui.vehicleStatus || undefined,
+  type: ui.vehicleType || undefined,
+  city: ui.vehicleCity || undefined,
 }));
 const { data, error, status, refresh } = await useAsyncData(
   'vehicles',
@@ -25,15 +27,32 @@ const { data, error, status, refresh } = await useAsyncData(
         Доступность машин, назначенные водители и текущий город.
       </p>
     </div>
-    <div class="panel mb-5 flex flex-col gap-3 p-4 sm:flex-row">
+    <div class="panel mb-5 flex flex-wrap gap-3 p-4">
       <input
         v-model="ui.vehicleSearch"
-        class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-600"
+        class="min-w-0 basis-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-emerald-600 lg:basis-auto lg:flex-1"
         placeholder="Поиск по госномеру или водителю"
+        aria-label="Поиск по госномеру или водителю"
+        maxlength="100"
       />
+      <input
+        v-model.trim="ui.vehicleCity"
+        class="form-control min-w-0 flex-1 sm:flex-none sm:w-44"
+        placeholder="Город"
+        aria-label="Город автомобиля"
+        maxlength="100"
+      />
+      <select v-model="ui.vehicleType" class="form-control w-auto" aria-label="Тип кузова">
+        <option value="">Все типы кузова</option>
+        <option value="TENT">Тент</option>
+        <option value="REFRIGERATOR">Рефрижератор</option>
+        <option value="ISOTHERM">Изотерм</option>
+        <option value="VAN">Фургон</option>
+      </select>
       <select
         v-model="ui.vehicleStatus"
         class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none"
+        aria-label="Статус автомобиля"
       >
         <option value="">Все статусы</option>
         <option value="AVAILABLE">Свободен</option>
@@ -41,6 +60,12 @@ const { data, error, status, refresh } = await useAsyncData(
         <option value="SERVICE">В сервисе</option>
         <option value="UNAVAILABLE">Недоступен</option>
       </select>
+      <button
+        class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold"
+        @click="ui.resetVehicleFilters()"
+      >
+        Сбросить
+      </button>
       <button
         class="rounded-xl bg-[#15231f] px-4 py-2.5 text-sm font-semibold text-white"
         @click="refresh()"

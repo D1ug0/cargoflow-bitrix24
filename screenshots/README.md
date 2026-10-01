@@ -11,6 +11,7 @@
 - `screenshots/bitrix/business-process.png` — согласование;
 - `screenshots/dashboard/overview.png` — главная dashboard;
 - `screenshots/dashboard/vehicles.png` — транспорт;
+- `screenshots/dashboard/vehicles-filtered.png` — транспорт с фильтрами по городу и типу кузова;
 - `screenshots/dashboard/trips.png` — рейсы;
 - `screenshots/dashboard/integrations.png` — журнал интеграции;
 - `screenshots/monitoring/grafana.png` — Grafana;
