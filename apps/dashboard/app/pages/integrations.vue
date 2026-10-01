@@ -33,6 +33,11 @@ function clearCorrelationFilter() {
   correlationInput.value = '';
   ui.integrationCorrelationId = '';
 }
+
+function filterByCorrelationId(value: string) {
+  correlationInput.value = value;
+  applyCorrelationFilter();
+}
 </script>
 
 <template>
@@ -123,10 +128,14 @@ function clearCorrelationFilter() {
             <td><StatusBadge :status="item.status" /></td>
             <td>{{ item.attempts }}</td>
             <td>
-              <span
-                class="block max-w-xs truncate font-mono text-[10px] text-slate-400"
+              <button
+                type="button"
+                class="block max-w-xs truncate text-left font-mono text-[10px] text-emerald-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700"
                 :title="item.correlationId"
-                >{{ item.correlationId }}</span
+                :aria-label="`Показать записи операции ${item.correlationId}`"
+                @click="filterByCorrelationId(item.correlationId)"
+              >
+                {{ item.correlationId }}</button
               ><span
                 v-if="item.error"
                 class="mt-1 block max-w-xs truncate text-xs text-rose-600"
